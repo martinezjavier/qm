@@ -43,6 +43,19 @@ template(`qm_domain_template',`
 		type bpf_t;
 		type container_devpts_t;
 		type net_conf_t;
+		type faillog_t;
+		type var_lock_t;
+		type var_log_t;
+		type var_spool_t;
+		type lastlog_t;
+		type user_tmp_t;
+		type unlabeled_t;
+		type user_fonts_t;
+		type init_var_lib_t;
+		type systemd_hostnamed_t;
+		type systemd_coredump_var_lib_t;
+		type tmp_t;
+		type wtmp_t;
 	')
 
 	type $1_t;
@@ -381,6 +394,79 @@ template(`qm_domain_template',`
 	logging_send_syslog_msg($1_container_init_t)
 
 	qm_container_template($1, wayland)
+
+	# Rules for wayland containers
+	allow $1_container_wayland_t $1_file_t:chr_file { open map };
+	allow $1_container_wayland_t $1_file_t:lnk_file read;
+
+	dev_rw_dri($1_container_wayland_t)
+
+	allow $1_container_wayland_t $1_file_t:dir { add_name write };
+	allow $1_container_wayland_t $1_file_t:file { create write };
+	allow $1_container_wayland_t sysfs_t:file { open read };
+	allow $1_container_wayland_t var_run_t:dir { add_name remove_name write };
+	allow $1_container_wayland_t var_run_t:file { create getattr lock open read write };
+	allow $1_container_wayland_t var_run_t:sock_file { create write getattr unlink };
+
+	allow $1_container_wayland_t $1_file_t:sock_file write;
+	allow $1_container_wayland_t $1_t:unix_stream_socket connectto;
+	allow $1_container_wayland_t unconfined_t:unix_stream_socket connectto;
+
+	allow $1_container_wayland_t $1_t:dbus send_msg;
+
+	allow $1_t $1_container_wayland_t:dbus send_msg;
+	allow $1_t var_run_t:sock_file { create setattr unlink write };
+
+	allow init_t $1_file_t:file { open read };
+
+	allow $1_t self:capability sys_tty_config;
+	allow $1_t unlabeled_t:file { open read };
+	allow $1_t wtmp_t:file { open write };
+	allow $1_t var_t:dir write;
+
+	allow $1_t container_var_lib_t:dir { relabelfrom relabelto };
+	allow $1_t etc_t:dir { relabelfrom relabelto };
+	allow $1_t etc_t:file { relabelfrom relabelto };
+	allow $1_t etc_t:lnk_file { relabelfrom relabelto };
+	allow $1_t faillog_t:file { relabelfrom relabelto };
+	allow $1_t init_var_lib_t:dir { relabelfrom relabelto };
+	allow $1_t lastlog_t:file { open lock read relabelfrom relabelto };
+	allow $1_t locale_t:file { relabelfrom relabelto };
+	allow $1_t security_t:security compute_relabel;
+	allow $1_t systemd_coredump_var_lib_t:dir { relabelfrom relabelto };
+	allow $1_t tmp_t:dir { create write relabelto add_name rmdir mounton remove_name };
+	allow $1_t unconfined_t:key { create write };
+	allow $1_t unconfined_t:dir search;
+	allow $1_t unconfined_t:file { getattr ioctl open read };
+	allow $1_t unconfined_t:lnk_file read;
+	allow $1_t unconfined_t:process { transition getattr };
+
+	allow $1_t $1_file_t:sock_file mounton;
+
+	allow $1_t unlabeled_t:file map;
+	allow $1_t user_fonts_t:dir { create relabelfrom relabelto };
+	allow $1_t user_tmp_t:dir { create relabelfrom relabelto };
+	allow $1_t var_lib_t:dir { relabelfrom relabelto };
+	allow $1_t var_lock_t:dir { add_name write relabelto };
+	allow $1_t var_lock_t:file { create lock open read write };
+	allow $1_t var_lock_t:lnk_file { read relabelfrom relabelto };
+	allow $1_t var_log_t:file { create open read write map unlink relabelto setattr };
+	allow $1_t var_log_t:lnk_file { read relabelfrom relabelto };
+	allow $1_t var_log_t:dir { write add_name remove_name relabelfrom relabelto };
+	allow $1_t var_run_t:dir { add_name remove_name create write watch relabelfrom relabelto mounton setattr rmdir };
+	allow $1_t var_run_t:file { create relabelto watch };
+	allow $1_t var_run_t:fifo_file { create open read write unlink };
+	allow $1_t var_run_t:lnk_file { relabelfrom relabelto };
+	allow $1_t var_run_t:file { open read unlink write rename lock relabelfrom setattr map };
+	allow $1_t var_spool_t:dir { relabelfrom relabelto };
+	allow $1_t var_t:dir { relabelfrom relabelto };
+	allow $1_t wtmp_t:file { lock relabelfrom relabelto };
+
+	allow systemd_hostnamed_t $1_file_t:dir search;
+	allow systemd_hostnamed_t $1_file_t:file read;
+
+	allow unconfined_t $1_file_t:file entrypoint;
+	allow unconfined_t $1_t:dbus send_msg;
 
 	read_files_pattern($1_container_domain, $1_container_ro_file_t,$1_container_ro_file_t,)
 	read_lnk_files_pattern($1_container_domain, $1_container_ro_file_t,$1_container_ro_file_t,)
